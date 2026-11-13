@@ -1,0 +1,71 @@
+name: Release
+
+# Push a tag like v0.1.0 to build the downloadable app and create a draft GitHub release.
+#
+# Optional, for builds that open without Gatekeeper warnings (needs an Apple Developer ID):
+#   MACOS_CERTIFICATE_P12_BASE64   Developer ID Application certificate (.p12), base64-encoded
+#   MACOS_CERTIFICATE_PASSWORD     password for the .p12
+#   APPLE_ID                       Apple ID email used for notarization
+#   APPLE_TEAM_ID                  10-character team ID
+#   APPLE_APP_SPECIFIC_PASSWORD    app-specific password for that Apple ID
+# Without these secrets the app is ad-hoc signed (users approve it once in System Settings).
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check VERSION matches tag
+        run: |
+          test "v$(cat VERSION)" = "${GITHUB_REF_NAME}" || {
+            echo "VERSION file ($(cat VERSION)) does not match tag ${GITHUB_REF_NAME}"; exit 1; }
+
+      - name: Test
+        run: swift build && .build/debug/MotionCues --auto-test
+
+      - name: Import Developer ID certificate (optional)
+        env:
+          P12: ${{ secrets.MACOS_CERTIFICATE_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.MACOS_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+        if: ${{ env.P12 != '' }}
+        run: |
+          KEYCHAIN="$RUNNER_TEMP/signing.keychain-db"
+          KEYCHAIN_PASSWORD="$(uuidgen)"
+          echo "$P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security import "$RUNNER_TEMP/cert.p12" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
+          IDENTITY="$(security find-identity -v -p codesigning "$KEYCHAIN" | grep -m1 -oE '"Developer ID Application[^"]*"' | tr -d '"')"
+          echo "CODESIGN_IDENTITY=$IDENTITY" >> "$GITHUB_ENV"
+          if [ -n "$APPLE_ID" ]; then
+            xcrun notarytool store-credentials motioncues-notary \
+              --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_SPECIFIC_PASSWORD" \
+              --keychain "$KEYCHAIN"
+            echo "NOTARY_PROFILE=motioncues-notary" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build DMG and zip
+        run: scripts/package.sh
+
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" dist/*.dmg dist/*.zip \
+            --draft --title "Motion Cues $GITHUB_REF_NAME" --generate-notes
