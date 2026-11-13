@@ -27,7 +27,7 @@ swift build
 ./start.sh                           # build, install to ~/Applications and launch
 ```
 
-See **For developers** in the [README](README.md) for the code layout and debug flags.
+See [Development](README.md#development) in the README for the code layout and debug commands.
 
 ## Before opening a pull request
 
