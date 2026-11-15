@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-15
+
 ### Changed
 - Releases are signed with a Developer ID and notarized by Apple, so the app opens without the "Open Anyway" step.
 - `scripts/bundle.sh` prefers a Developer ID identity over Apple Development when both are installed.
@@ -49,7 +51,8 @@ First public release.
 - One-line installer (`install.sh`) with `--from-source` and `--uninstall`.
 - `start.sh`, a DMG/zip packaging script, CI, and a release workflow.
 
-[Unreleased]: https://github.com/Spandan2022/MacOS_Motion_Cues/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/Spandan2022/MacOS_Motion_Cues/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/Spandan2022/MacOS_Motion_Cues/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/Spandan2022/MacOS_Motion_Cues/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Spandan2022/MacOS_Motion_Cues/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Spandan2022/MacOS_Motion_Cues/releases/tag/v0.1.0
