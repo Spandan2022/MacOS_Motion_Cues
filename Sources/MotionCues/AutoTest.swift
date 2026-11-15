@@ -62,6 +62,17 @@ enum AutoTest {
             return g + Vec3(x: a + noise(0.02), y: noise(0.02), z: noise(0.02))
         }, gyro: { t in Vec3(x: noise(1.5), y: noise(1.5), z: (t > 5 ? -12 : 0) + noise(1.5)) })
 
+        // Train pulling away: very gentle 0.025 g push with rail vibration, no turning.
+        scenario("Train accelerating very gently (0.025 g)", expectTrigger: true, seconds: 25, accel: { t in
+            let a = t > 5 ? 0.025 : 0
+            return g + Vec3(x: noise(0.02), y: a + noise(0.02), z: noise(0.02))
+        }, gyro: { _ in Vec3(x: noise(1.5), y: noise(1.5), z: noise(1.5)) })
+
+        // Train cruising at constant speed: only continuous rail vibration.
+        scenario("Train cruising (rail vibration only)", expectTrigger: true, seconds: 40, accel: { _ in
+            g + Vec3(x: noise(0.015), y: noise(0.015), z: noise(0.025))
+        }, gyro: { _ in Vec3(x: noise(1.5), y: noise(1.5), z: noise(1.5)) })
+
         // Walking with the laptop: 2 Hz steps, 0.15 g fore/aft bob, swaying tilt.
         scenario("Walking around carrying the laptop", expectTrigger: false, seconds: 30, accel: { t in
             let step = 0.15 * sin(2 * .pi * 2 * t)

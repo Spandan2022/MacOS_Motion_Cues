@@ -74,6 +74,9 @@ final class MotionProcessor {
     private var signScore: Double = 0
     private var magnitudeMean: Double = 1
     private var vibrationPower: Double = 0
+    /// Fraction of recent samples with a vibration jolt (smoothed, 0…1). Continuous rail or
+    /// road vibration keeps this high; sparse taps from typing don't.
+    private(set) var vibrationBusy: Double = 0
 
     // Tuning
     private let fusedGravityTau = 12.0    // s; accel correction when the gyro is tracking tilt
@@ -94,6 +97,13 @@ final class MotionProcessor {
     // Automatic-mode trigger.
     private let requiredEvidence = 2.5      // s of sustained motion
     private let sustainedThreshold = 0.035  // g of steady horizontal acceleration
+    // Trains accelerate gently and rarely turn sharply, so weaker signals also count, just
+    // more slowly: gentle acceleration triggers in ~6 s, steady vibration alone in ~20 s.
+    private let gentleThreshold = 0.018     // g of steady horizontal acceleration
+    private let gentleRate = 0.4
+    private let busyJolt = 0.01             // g; a sample counts as vibrating above this
+    private let busyThreshold = 0.3         // fraction of vibrating samples = continuous rumble
+    private let vibrationRate = 0.12
     private let walkingTilt = 8.0           // °/s of tilting = laptop being carried/handled
     private let walkingJolts = 0.08         // g RMS of jolts = footsteps
 
@@ -220,6 +230,7 @@ final class MotionProcessor {
         let hp = mag - magnitudeMean
         vibrationPower += (hp * hp - vibrationPower) * Self.alpha(dt, 1.5)
         accelNoise = vibrationPower.squareRoot()
+        vibrationBusy += ((abs(hp) > busyJolt ? 1 : 0) - vibrationBusy) * Self.alpha(dt, 2)
         vibration = max(0, accelNoise - vibrationFloor)
 
         // While the laptop itself is being handled, don't feed the dots or auto-detection.
@@ -252,10 +263,17 @@ final class MotionProcessor {
         }
         let steady = (sustained.f * sustained.f + sustained.l * sustained.l).squareRoot()
         let turning = abs(cue.yawRate) > 6 && abs(sustained.l) > 0.02
-        if (steady > sustainedThreshold || turning) && !isStill {
-            motionEvidence = min(motionEvidence + dt, requiredEvidence + 1)
+        let rate: Double
+        if isStill { rate = 0 }
+        else if steady > sustainedThreshold || turning { rate = 1 }
+        else if steady > gentleThreshold { rate = gentleRate }
+        else if vibrationBusy > busyThreshold { rate = vibrationRate }
+        else { rate = 0 }
+        if rate > 0 {
+            motionEvidence = min(motionEvidence + dt * rate, requiredEvidence + 1)
         } else {
-            motionEvidence = max(0, motionEvidence - dt * 2)
+            // Decay slowly, so a train's gentle on-off pulls still add up.
+            motionEvidence = max(0, motionEvidence - dt * 0.5)
         }
     }
 

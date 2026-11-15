@@ -1,6 +1,7 @@
 name: Release
 
-# Push a tag like v0.1.0 to build the downloadable app and create a draft GitHub release.
+# Push a tag like v0.1.0 to build the downloadable app and publish it as the latest GitHub release.
+# scripts/release.sh <version> --push bumps VERSION, updates CHANGELOG.md, tags and pushes.
 #
 # Optional, for builds that open without Gatekeeper warnings (needs an Apple Developer ID):
 #   MACOS_CERTIFICATE_P12_BASE64   Developer ID Application certificate (.p12), base64-encoded
@@ -63,9 +64,23 @@ jobs:
       - name: Build DMG and zip
         run: scripts/package.sh
 
-      - name: Create draft release
+      - name: Release notes from CHANGELOG.md
+        run: |
+          awk -v v="$(cat VERSION)" '
+            $0 ~ "^## \\[" v "\\]" { on = 1; next }
+            on && /^## \[/ { exit }
+            on { print }' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          cat >> "$RUNNER_TEMP/notes.md" <<'EOF'
+
+          ### Install
+          - **DMG:** download `MotionCues.dmg` below, open it and drag Motion Cues into Applications. The first time, allow it in System Settings ▸ Privacy & Security ▸ Open Anyway.
+          - **Terminal:** `curl -fsSL https://raw.githubusercontent.com/Spandan2022/MacOS_Motion_Cues/main/install.sh | bash`
+          EOF
+          cat "$RUNNER_TEMP/notes.md"
+
+      - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release create "$GITHUB_REF_NAME" dist/*.dmg dist/*.zip \
-            --draft --title "Motion Cues $GITHUB_REF_NAME" --generate-notes
+            --latest --title "Motion Cues $GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md"

@@ -44,9 +44,10 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var simulation: (start: TimeInterval, profile: (Double) -> MotionCue?)?
 
     // Automatic mode turns on only on sustained vehicle-like motion (see
-    // MotionProcessor.vehicleMotionDetected), and off after a minute without motion.
+    // MotionProcessor.vehicleMotionDetected), and off after three minutes without motion,
+    // so the dots survive red lights, traffic jams and station stops.
     private let autoOffThreshold = 0.014   // g of smoothed activity that still counts as moving
-    private let autoOffDelay: TimeInterval = 60
+    private let autoOffDelay: TimeInterval = 180
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
@@ -219,6 +220,11 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
 
         menu.addItem(.separator())
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
+        menu.addItem(disabled("Motion Cues \(version)"))
+        menu.addItem(action("Check for Updates…") {
+            NSWorkspace.shared.open(URL(string: "https://github.com/Spandan2022/MacOS_Motion_Cues/releases/latest")!)
+        })
         menu.addItem(NSMenuItem(title: "Quit Motion Cues", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"))
     }
 
@@ -366,9 +372,9 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         Timer.scheduledTimer(withTimeInterval: 0.25, repeats: true) { [weak self] _ in
             guard let self else { return }
             let c = self.processor.cue
-            print(String(format: "fwd %+.3f  lat %+.3f  yaw %+6.1f | raw f %+.3f l %+.3f y %+6.1f | linear %.3f vib %.4f activity %.4f sign %+.0f auto %@ | aN %.4f gN %.3f still %@ evidence %.1f",
+            print(String(format: "fwd %+.3f  lat %+.3f  yaw %+6.1f | raw f %+.3f l %+.3f y %+6.1f | linear %.3f vib %.4f activity %.4f sign %+.0f auto %@ | aN %.4f gN %.3f still %@ evidence %.1f busy %.2f",
                          c.forward, c.lateral, c.yawRate, self.processor.rawForward, self.processor.rawLateral,
-                         self.processor.rawYaw, self.processor.rawLinear, self.processor.vibration, self.processor.activity, self.processor.gyroSign, self.autoActive ? "on" : "off", self.processor.accelNoise, self.processor.gyroNoise, self.processor.isStill ? "Y" : "n", self.processor.motionEvidence))
+                         self.processor.rawYaw, self.processor.rawLinear, self.processor.vibration, self.processor.activity, self.processor.gyroSign, self.autoActive ? "on" : "off", self.processor.accelNoise, self.processor.gyroNoise, self.processor.isStill ? "Y" : "n", self.processor.motionEvidence, self.processor.vibrationBusy))
             fflush(stdout)
         }
     }

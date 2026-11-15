@@ -53,9 +53,9 @@ Running the same command again updates to the newest version. To remove the app,
 
 ### Other ways to install
 
-**Download the DMG.** Get **MotionCues-x.y.z.dmg** from the
-[latest release](https://github.com/Spandan2022/MacOS_Motion_Cues/releases/latest) and drag Motion Cues into
-Applications. Releases aren't notarized by Apple yet, so the first time you open it, go to **System Settings ▸
+**Download the DMG.** [**⬇ Download MotionCues.dmg**](https://github.com/Spandan2022/MacOS_Motion_Cues/releases/latest/download/MotionCues.dmg)
+(always the latest version; older versions are on the [releases page](https://github.com/Spandan2022/MacOS_Motion_Cues/releases)),
+open it and drag Motion Cues into Applications. Releases aren't notarized by Apple yet, so the first time you open it, go to **System Settings ▸
 Privacy & Security** and click **Open Anyway**. The Terminal install above skips this step.
 
 **Build from source.** This needs Xcode or the Command Line Tools (`xcode-select --install`).
@@ -206,6 +206,7 @@ swift build                                  # debug build
 .build/debug/MotionCues --simulate drive     # drive, speedup, brake, left, right
 .build/debug/MotionCues --render-demo <dir>  # frames for the demo GIF
 scripts/package.sh                           # release DMG and zip in dist/
+scripts/release.sh 0.2.0 --push              # bump version, tag, publish a GitHub release
 ```
 
 <details>

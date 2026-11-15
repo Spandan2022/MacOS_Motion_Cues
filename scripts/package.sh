@@ -6,6 +6,8 @@
 # Builds release downloads into dist/:
 #   MotionCues-<version>.dmg   drag-to-Applications disk image
 #   MotionCues-<version>.zip   zipped app
+#   MotionCues.dmg             same DMG under a fixed name, so
+#                              releases/latest/download/MotionCues.dmg always works
 #
 # If NOTARY_PROFILE is set (a `xcrun notarytool store-credentials` profile) and the app is
 # signed with a Developer ID, the app and DMG are notarized and stapled, so they open
@@ -51,6 +53,7 @@ if [[ -n "${NOTARY_PROFILE:-}" && $SIGNED_WITH_DEVELOPER_ID == 1 ]]; then
   notarize "$DMG"
   xcrun stapler staple "$DMG"
 fi
+cp "$DMG" "$DIST/MotionCues.dmg"
 
 echo "Built:"
 ls -lh "$DIST"

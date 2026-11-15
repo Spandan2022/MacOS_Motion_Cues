@@ -5,6 +5,10 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- Automatic mode detects trains better: gentle acceleration (≥0.018 g) and steady rail/road vibration now count as motion, just more slowly than a firm push.
+- Automatic mode keeps the dots on for 3 minutes without motion (was 1 minute), so they survive red lights and station stops.
+
 ## [0.1.0] - 2026-11-13
 
 First public release.

@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Check shell scripts
-        run: bash -n install.sh && zsh -n start.sh scripts/bundle.sh scripts/package.sh
+        run: bash -n install.sh && zsh -n start.sh scripts/bundle.sh scripts/package.sh scripts/release.sh
 
       - name: Build (debug)
         run: swift build
