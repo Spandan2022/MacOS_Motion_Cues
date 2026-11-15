@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-11-15
+
 ### Fixed
 - Releases are now actually notarized. 0.3.1 was signed with the Developer ID, but the packaging script didn't recognize the signature and skipped notarization; it now detects it, and stops with an error instead of skipping silently.
 
@@ -54,7 +56,8 @@ First public release.
 - One-line installer (`install.sh`) with `--from-source` and `--uninstall`.
 - `start.sh`, a DMG/zip packaging script, CI, and a release workflow.
 
-[Unreleased]: https://github.com/Spandan2022/MacOS_Motion_Cues/compare/v0.3.1...HEAD
+[Unreleased]: https://github.com/Spandan2022/MacOS_Motion_Cues/compare/v0.3.2...HEAD
+[0.3.2]: https://github.com/Spandan2022/MacOS_Motion_Cues/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/Spandan2022/MacOS_Motion_Cues/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/Spandan2022/MacOS_Motion_Cues/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Spandan2022/MacOS_Motion_Cues/releases/tag/v0.2.0
