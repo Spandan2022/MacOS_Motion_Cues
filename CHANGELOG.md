@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-15
+
 ### Added
 - First-launch Welcome Guide: a live preview of the dots on a sample drive, and where the app lives in the menu bar. Reopen it from Advanced ▸ Welcome Guide….
 
@@ -40,6 +42,7 @@ First public release.
 - One-line installer (`install.sh`) with `--from-source` and `--uninstall`.
 - `start.sh`, a DMG/zip packaging script, CI, and a release workflow.
 
-[Unreleased]: https://github.com/Spandan2022/MacOS_Motion_Cues/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Spandan2022/MacOS_Motion_Cues/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/Spandan2022/MacOS_Motion_Cues/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/Spandan2022/MacOS_Motion_Cues/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Spandan2022/MacOS_Motion_Cues/releases/tag/v0.1.0
