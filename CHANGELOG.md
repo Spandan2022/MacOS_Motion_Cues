@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-11-15
+
 ### Changed
 - Automatic mode detects trains better: gentle acceleration (≥0.018 g) and steady rail/road vibration now count as motion, just more slowly than a firm push.
 - Automatic mode keeps the dots on for 3 minutes without motion (was 1 minute), so they survive red lights and station stops.
@@ -25,5 +27,6 @@ First public release.
 - One-line installer (`install.sh`) with `--from-source` and `--uninstall`.
 - `start.sh`, a DMG/zip packaging script, CI, and a release workflow.
 
-[Unreleased]: https://github.com/Spandan2022/MacOS_Motion_Cues/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Spandan2022/MacOS_Motion_Cues/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Spandan2022/MacOS_Motion_Cues/releases/tag/v0.2.0
 [0.1.0]: https://github.com/Spandan2022/MacOS_Motion_Cues/releases/tag/v0.1.0
