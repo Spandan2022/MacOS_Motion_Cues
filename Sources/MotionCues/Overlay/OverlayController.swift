@@ -10,7 +10,6 @@ final class OverlayController {
     var cueProvider: () -> MotionCue = { MotionCue() }
 
     private var windows: [NSWindow] = []
-    private var samplers: [ScreenSampler] = []
     private(set) var isVisible = false
 
     init() {
@@ -20,9 +19,7 @@ final class OverlayController {
         NotificationCenter.default.addObserver(
             forName: Settings.didChange, object: nil, queue: .main
         ) { [weak self] _ in
-            guard let self else { return }
-            self.updateSamplers()
-            self.windows.forEach { ($0.contentView as? DotsView)?.rebuildDots() }
+            self?.windows.forEach { ($0.contentView as? DotsView)?.rebuildDots() }
         }
     }
 
@@ -67,32 +64,9 @@ final class OverlayController {
             window.orderFrontRegardless()
             windows.append(window)
         }
-        updateSamplers()
-    }
-
-    /// Starts one background sampler per screen when the color mode adapts to the background.
-    private func updateSamplers() {
-        samplers.forEach { $0.stop() }
-        samplers.removeAll()
-        guard isVisible, Settings.shared.color.isAdaptive else {
-            windows.forEach { ($0.contentView as? DotsView)?.sampler = nil }
-            return
-        }
-        ScreenSampler.requestPermissionIfNeeded()
-        for window in windows {
-            guard let view = window.contentView as? DotsView,
-                  let number = window.screen?.deviceDescription[NSDeviceDescriptionKey("NSScreenNumber")] as? NSNumber
-            else { continue }
-            let sampler = ScreenSampler(displayID: CGDirectDisplayID(number.uint32Value))
-            sampler.start()
-            view.sampler = sampler
-            samplers.append(sampler)
-        }
     }
 
     private func tearDown() {
-        samplers.forEach { $0.stop() }
-        samplers.removeAll()
         for window in windows {
             (window.contentView as? DotsView)?.stopAnimating()
             window.orderOut(nil)

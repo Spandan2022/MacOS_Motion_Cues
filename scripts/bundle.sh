@@ -27,6 +27,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/MotionCues "$APP/Contents/MacOS/MotionCues"
 [[ -f Resources/AppIcon.icns ]] || swift scripts/make_icon.swift
 cp Resources/AppIcon.icns "$APP/Contents/Resources/AppIcon.icns"
+cp Resources/MacBookFrame.png "$APP/Contents/Resources/MacBookFrame.png"
 
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
@@ -50,8 +51,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
-# Sign with a real identity if one exists, so macOS privacy permissions (Screen Recording)
-# survive rebuilds. Ad-hoc signatures change every build and make macOS ask again.
+# Sign with a real identity if one exists, so macOS settings tied to the app (like Open at Login)
+# survive rebuilds. Ad-hoc signatures change every build, so macOS treats each build as a new app.
 IDENTITY="${CODESIGN_IDENTITY:-$(security find-identity -p codesigning -v 2>/dev/null | grep -m1 -oE '"(Developer ID Application|Apple Development)[^"]*"' | tr -d '"' || true)}"
 if [[ -n "$IDENTITY" ]]; then
   codesign --force --options runtime --timestamp --sign "$IDENTITY" "$APP"

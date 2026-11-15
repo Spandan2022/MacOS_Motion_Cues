@@ -1,6 +1,6 @@
 # Motion Cues for Mac
 
-**Vehicle motion cues for your MacBook: read comfortably on the train, bus or car without motion sickness.**
+*Vehicle motion cues for your MacBook: work comfortably on the train, bus or car without motion sickness.*
 
 <p>
   <a href="https://github.com/Spandan2022/MacOS_Motion_Cues/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/Spandan2022/MacOS_Motion_Cues?include_prereleases&style=for-the-badge&label=release&labelColor=1f2328&color=2f6fe4"></a>
@@ -37,12 +37,10 @@ Paste this into **Terminal**:
 curl -fsSL https://raw.githubusercontent.com/Spandan2022/MacOS_Motion_Cues/main/install.sh | bash
 ```
 
-It checks that your Mac is supported, installs the latest release into Applications and opens it. Then, from the
-**car icon** in the menu bar:
-
-1. Choose **Advanced ▸ Direction ▸ Calibrate…**. This is a one-time, 10-second setup so the dots move the right way.
-2. Turn on **Launch at Login**.
-3. Leave **Show Motion Cues** on **Automatic**. The dots appear by themselves once you're moving.
+It checks that your Mac is supported, installs the latest release into Applications and opens it. On first launch a
+short **Welcome Guide** shows what the dots do and where the app lives (the **car icon** in the menu bar). Turn on
+**Open at Login** from that menu, and leave **Show Motion Cues** on **Automatic** so the dots appear by themselves
+once you're moving. You can reopen the guide from **Advanced ▸ Welcome Guide…**.
 
 Running the same command again updates to the newest version. To remove the app, run it with `bash -s -- --uninstall`.
 
@@ -54,9 +52,10 @@ Running the same command again updates to the newest version. To remove the app,
 ### Other ways to install
 
 **Download the DMG.** [**⬇ Download MotionCues.dmg**](https://github.com/Spandan2022/MacOS_Motion_Cues/releases/latest/download/MotionCues.dmg)
-(always the latest version; older versions are on the [releases page](https://github.com/Spandan2022/MacOS_Motion_Cues/releases)),
-open it and drag Motion Cues into Applications. Releases aren't notarized by Apple yet, so the first time you open it, go to **System Settings ▸
-Privacy & Security** and click **Open Anyway**. The Terminal install above skips this step.
+(always the latest version; older versions are on the
+[releases page](https://github.com/Spandan2022/MacOS_Motion_Cues/releases)), open it and drag Motion Cues into
+Applications. Releases aren't notarized by Apple yet, so the first time you open it, go to **System Settings ▸ Privacy
+& Security** and click **Open Anyway**. The Terminal install above skips this step.
 
 **Build from source.** This needs Xcode or the Command Line Tools (`xcode-select --install`).
 
@@ -76,10 +75,10 @@ cd MacOS_Motion_Cues
   of the screen and grow back in at the other.
 - **Turns you can see.** In a turn, the two sides flow in opposite directions, like the scenery rotating around you,
   and the columns lean sideways. Strong motion brings in a second column.
-- **Colors that adapt dot by dot.** Each dot checks the pixels directly behind it, so it's dark over a white page
-  and light over a dark photo.
-- **Automatic mode that knows the difference.** It turns on after a few seconds of steady vehicle motion. Walking
-  around with your laptop, typing or sitting still won't set it off.
+- **No permissions needed.** It only reads the motion sensor, so there's nothing to approve in System Settings.
+- **Automatic mode that knows the difference.** It turns on after a few seconds of vehicle motion, including the
+  gentle pull of a train, and stays on through red lights and station stops. Walking around with your laptop,
+  typing or sitting still won't set it off.
 - **Stays out of the way.** It lives in the menu bar, lets every click through, and works on all displays and
   Spaces, including full-screen apps. It stays out of screenshots and uses about 2% CPU.
 
@@ -105,30 +104,21 @@ Everything is in the menu-bar menu. Appearance and tuning are under **Advanced**
 | Show Motion Cues | Off, On, Automatic | Automatic |
 | Dot Size | Small, Medium, Large | Medium |
 | Dot Density | Low, Medium, High | Medium |
-| Dot Color | Greyscale, Blue, Yellow, Green, Red, Purple, White, Black | Greyscale |
+| Dot Color | White, Grey, Black, Blue, Yellow, Green, Red, Purple | Grey |
 | Dot Opacity | 35%, 50%, 75%, 100% | 75% |
 | Sensitivity | Low, Medium, High, Max | Medium |
 | Direction | Calibrate, or invert front/back, left/right and turns | — |
 | Test Motion | Speed up, brake, turn left/right, stop-and-go drive | — |
 
-### Adaptive color
-
-<img src="docs/images/adaptive-dots.png" alt="Greyscale dots render dark over a white area and light over a dark area" width="420">
-
-Each dot looks at the small patch of screen behind it 15 times a second and picks a tone that stands out:
-
-- **Greyscale** turns dark grey on bright backgrounds and off-white on dark ones.
-- **Colors** keep their hue. They get deeper on bright backgrounds (yellow turns amber) and brighter on dark ones.
-- **White** and **Black** stay fixed and don't need to look at the screen at all.
+**Grey** reads on both light and dark windows. Pick **White** if you mostly use dark mode, or **Black** for bright
+documents and web pages.
 
 ## Privacy
 
-- Motion Cues **never connects to the internet**.
+- Motion Cues **never connects to the internet**. **Check for Updates…** just opens the releases page in your
+  browser.
 - The motion sensor is read locally and needs no permission.
-- Adaptive colors need **Screen Recording** permission. The app reads a tiny, low-resolution image of the screen
-  (with the dots left out) only to pick each dot's tone. Nothing is saved, and no audio is captured. While this is
-  on, macOS shows its recording indicator in the menu bar. Pick **White** or **Black** dots to turn it off
-  completely.
+- It never looks at your screen, so it doesn't ask for Screen Recording permission.
 
 ## FAQ
 
@@ -153,21 +143,12 @@ assume you're facing the same way as the keyboard.
 </details>
 
 <details>
-<summary><b>The dots are always the same grey</b></summary>
+<summary><b>The dots are hard to see</b></summary>
 
 <br>
 
-Adaptive color needs Screen Recording permission. Choose **Advanced ▸ Allow Screen Recording…**, turn on Motion
-Cues, then choose **Relaunch Motion Cues** from the same menu.
-</details>
-
-<details>
-<summary><b>macOS keeps asking for Screen Recording</b></summary>
-
-<br>
-
-Current releases aren't signed with a developer certificate, so macOS treats each new version as a new app and asks
-once after every update.
+Change **Advanced ▸ Dot Color** to stand out against what's on screen (**Black** on bright pages, **White** in dark
+mode), or raise **Dot Opacity** or **Dot Size**.
 </details>
 
 <details>
@@ -175,8 +156,9 @@ once after every update.
 
 <br>
 
-It waits for about 2.5 seconds of steady acceleration, braking or turning, and very smooth rides can stay below that.
-Switch to **On**, or raise **Sensitivity**. If it turns on when you're *not* moving, please
+It turns on after about 2.5 seconds of firm acceleration, braking or turning, about 6 seconds of gentle acceleration,
+or about 20 seconds of steady road or rail vibration. A very smooth ride at constant speed can stay below all three;
+switch to **On** for that trip. If it turns on when you're *not* moving, please
 [open a ride report](https://github.com/Spandan2022/MacOS_Motion_Cues/issues/new/choose).
 </details>
 
@@ -202,11 +184,14 @@ Motion Cues is a single Swift package with no dependencies.
 ```bash
 swift build                                  # debug build
 .build/debug/MotionCues --log                # live motion readout
-.build/debug/MotionCues --auto-test          # Automatic-mode scenarios (also run in CI)
+.build/debug/MotionCues --auto-test          # Automatic-mode and direction scenarios (also run in CI)
 .build/debug/MotionCues --simulate drive     # drive, speedup, brake, left, right
+.build/debug/MotionCues --render-test <dir>  # dot renders as PNGs
 .build/debug/MotionCues --render-demo <dir>  # frames for the demo GIF
+.build/debug/MotionCues --onboarding         # show the Welcome Guide again
+.build/debug/MotionCues --render-onboarding <dir>  # Welcome Guide pages as PNGs
 scripts/package.sh                           # release DMG and zip in dist/
-scripts/release.sh 0.2.0 --push              # bump version, tag, publish a GitHub release
+scripts/release.sh 0.3.0 --push              # bump version, tag, publish a GitHub release
 ```
 
 <details>
@@ -218,13 +203,17 @@ scripts/release.sh 0.2.0 --push              # bump version, tag, publish a GitH
   `0xFF00`, usages 3 and 9). They stay silent until the driver's `SensorPropertyReportingState`,
   `SensorPropertyPowerState` and `ReportInterval` properties are set. After that, each 22-byte report holds three
   little-endian `Int32` values at offset 6, in 16.16 fixed point (g, or degrees per second).
-- **Gravity tracking.** Gravity is rotated with the gyro and corrected toward the accelerometer over about 12
-  seconds. The gyro's sign is learned from the first few tilts. When the laptop is perfectly still, gravity is
-  re-locked and the gyro bias re-learned, which prevents drift.
+- **Gravity tracking.** Gravity can only change direction when the laptop rotates, so it is rotated with the gyro
+  and only nudged toward the accelerometer to remove drift: over about 3 seconds when the laptop is perfectly still,
+  over about 12 seconds otherwise, and not at all (for up to 20 seconds) during a sustained push without tilting, so
+  speeding up or braking is never mistaken for gravity. The gyro's sign is learned from the first few tilts, and its
+  bias is re-learned whenever the laptop is still.
 - **Vehicle frame.** The acceleration left over is projected onto the horizontal plane. The sensor's x axis is
   left/right, and the axis perpendicular to it and to gravity is front/back.
-- **Automatic mode.** It needs about 2.5 seconds of steady acceleration (0.035 g or more) or a steady turn, with no
-  tilting or footstep jolts.
+- **Automatic mode.** It builds up evidence of vehicle motion: fastest from steady acceleration of 0.035 g or more
+  or a steady turn (about 2.5 seconds), slower from gentle acceleration of 0.018 g or more (about 6 seconds) and
+  slowest from continuous road or rail vibration (about 20 seconds). Tilting or footstep jolts reset it. It turns
+  off after 3 minutes without motion.
 
 </details>
 
@@ -236,15 +225,16 @@ scripts/release.sh 0.2.0 --push              # bump version, tag, publish a GitH
 ```
 Sources/MotionCues/
 ├── App.swift                       Menu bar, Automatic mode, test motions, calibration
-├── Settings.swift                  Preferences and adaptive color
+├── Onboarding.swift                Welcome Guide window
+├── Settings.swift                  Preferences and dot colors
 ├── Sensor/SPUSensor.swift          Reads the accelerometer and gyro through IOKit HID
 ├── Motion/MotionProcessor.swift    Fusion, filtering, stillness, vehicle-motion detection
 ├── Overlay/DotsView.swift          Dot layout and animation
-├── Overlay/ScreenSampler.swift     Background sampling for adaptive color
 ├── Overlay/OverlayController.swift Click-through window on each screen
 ├── AutoTest.swift                  Synthetic Automatic-mode scenarios
 └── RenderTest.swift                Offscreen renders and demo frames
-scripts/                            Build, package and icon scripts
+Resources/                          App icon and the Welcome Guide's MacBook frame
+scripts/                            Build, package, release and icon scripts
 install.sh                          One-line installer
 start.sh                            Build and launch for development
 ```

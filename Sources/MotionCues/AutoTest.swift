@@ -87,6 +87,43 @@ enum AutoTest {
             let tap = (Int(t * 100) % 23 == 0) ? 0.05 : 0
             return g + Vec3(x: tap + noise(0.006), y: noise(0.006), z: tap + noise(0.006))
         }, gyro: { _ in Vec3(x: noise(0.6), y: noise(0.6), z: noise(0.6)) })
+        // Direction: the forward cue must follow real acceleration and never flip to "braking"
+        // while the vehicle speeds up or just after. Quiet sensor data, like a smooth EV or train.
+        // In this synthetic frame (gravity along -z, keyboard along x) forward is -y.
+        print("")
+        func direction(_ name: String, gyroSign: Double, bumpy: Bool = false, accel: @escaping (Double) -> Double) {
+            let n = bumpy ? 0.02 : 0.003
+            let p = MotionProcessor(learnedGyroSign: gyroSign)
+            var t = 0.0, peak = 0.0, worst = 0.0, firstSeen: Double?
+            while t < 40 {
+                p.process(.gyro(Vec3(x: noise(0.5), y: noise(0.5), z: noise(0.5)), t))
+                p.process(.accel(g + Vec3(x: noise(n), y: -accel(t) + noise(n), z: noise(n)), t))
+                if ProcessInfo.processInfo.environment["AUTOTEST_TRACE"] == name, Int(t * 100) % 50 == 0 {
+                    print(String(format: "  t=%4.1f f=%+.4f rawF=%+.4f still=%@ aN=%.4f", t, p.cue.forward, p.rawForward, p.isStill ? "Y" : "n", p.accelNoise))
+                }
+                if t > 8 {
+                    peak = max(peak, p.cue.forward)
+                    worst = min(worst, p.cue.forward)
+                    if firstSeen == nil, p.cue.forward > 0.01 { firstSeen = t - 8 }
+                }
+                t += 0.01
+            }
+            // Picks up the push within 1.5 s, reaches at least half of it, never reads as braking.
+            let passed = (firstSeen ?? 99) < 1.5 && peak > 0.5 * accel(12) && worst > -0.01
+            allPassed = allPassed && passed
+            print(passed ? "PASS" : "FAIL", name.padding(toLength: 44, withPad: " ", startingAt: 0),
+                  String(format: "seen after %.1f s, peak %.3f g, most reverse %.3f g", firstSeen ?? -1, peak, worst))
+        }
+        // 8 s stopped at a light, then speeding up for 8 s, then cruising.
+        let pullAway: (Double) -> Double = { t in t > 8 && t < 16 ? 0.06 * min(1, (t - 8) / 1.5) : 0 }
+        let gentle: (Double) -> Double = { t in t > 8 && t < 20 ? 0.03 * min(1, (t - 8) / 2) : 0 }
+        direction("Pull away from a stop (0.06 g, 8 s)", gyroSign: 1, accel: pullAway)
+        direction("Pull away, gyro sign not learned yet", gyroSign: 0, accel: pullAway)
+        direction("Train: gentle 0.03 g for 12 s", gyroSign: 1, accel: gentle)
+        // A long merge on a bumpy road: slow gravity correction used to soak this up and then
+        // play it back as braking.
+        let merge: (Double) -> Double = { t in t > 8 && t < 20 ? 0.1 * min(1, (t - 8) / 2) : 0 }
+        direction("Long merge on a bumpy road (0.1 g, 12 s)", gyroSign: 1, bumpy: true, accel: merge)
         return allPassed
     }
 }

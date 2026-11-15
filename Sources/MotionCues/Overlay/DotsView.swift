@@ -15,12 +15,13 @@ import QuartzCore
 ///   when turning left), like the scenery rotating around you.
 /// - Sideways force pushes the columns sideways; strong pushes carry them past the edge.
 /// - Dots grow a little with motion, and a second, inner column grows in when it's strong.
-/// - Each dot's tone adapts to the pixels behind it (see `DotColor.color(onBackground:)`).
 final class DotsView: NSView {
     /// Supplies the latest cue each frame.
     var cueProvider: () -> MotionCue = { MotionCue() }
-    /// Background sampler for this screen; nil when the color mode isn't adaptive.
-    var sampler: ScreenSampler?
+    /// Scales dot size and spacing, for drawing the dots on a miniature screen (Welcome Guide).
+    var scale: CGFloat = 1 { didSet { rebuildDots() } }
+    /// A dot color that overrides the color setting (Welcome Guide).
+    var colorOverride: DotColor? { didSet { rebuildDots() } }
 
     private struct Dot {
         let layer: CALayer
@@ -30,8 +31,6 @@ final class DotsView: NSView {
     }
 
     private var dots: [Dot] = []
-    /// Per-dot smoothed background luminance (nil until sampled).
-    private var dotLuminance: [CGFloat?] = []
     private var displayLink: CADisplayLink?
     private var lastTimestamp: CFTimeInterval?
 
@@ -47,13 +46,12 @@ final class DotsView: NSView {
     private var smoothedTargetX: CGFloat = 0
     /// Smoothed 0…1 amount of motion; grows the dots and brings in the inner column.
     private var intensity: CGFloat = 0
-    private var colorClock: CFTimeInterval = 0
 
     private let speedSmoothing: CGFloat = 0.3  // s; how quickly the flow speed follows motion
     private let springOmega: CGFloat = 6       // rad/s for sideways movement (soft, ~0.6 s settle)
     private let lateralSmoothing: CGFloat = 0.25 // s; smooths the sideways target
 
-    private var dotSize: CGFloat { Settings.shared.dotSize.points }
+    private var dotSize: CGFloat { Settings.shared.dotSize.points * scale }
     private var spacing: CGFloat { dotSize * Settings.shared.density.spacingFactor }
     private var columnSpan: CGFloat { CGFloat(dotsPerColumn) * spacing }
     private var dotsPerColumn = 0
@@ -99,7 +97,8 @@ final class DotsView: NSView {
         // looks endless as it flows.
         dotsPerColumn = Int(ceil(bounds.height / spacing)) + 2
         let scale = window?.backingScaleFactor ?? 2
-        let initial = Settings.shared.color.color(onBackground: nil).cgColor
+        let color = colorOverride ?? Settings.shared.color
+        let fill = color.fill.cgColor
         // Translucent, so whatever is under each dot stays visible.
         let opacity = Settings.shared.opacity.value
 
@@ -109,18 +108,16 @@ final class DotsView: NSView {
                     let l = CALayer()
                     l.bounds = CGRect(x: 0, y: 0, width: size, height: size)
                     l.cornerRadius = size / 2
-                    l.backgroundColor = initial
-                    l.opacity = opacity
+                    l.backgroundColor = fill
+                    l.opacity = colorOverride == nil ? opacity : 0.9
                     l.contentsScale = scale
-                    l.actions = ["position": NSNull(), "transform": NSNull(), "backgroundColor": NSNull(), "hidden": NSNull()]
+                    l.actions = ["position": NSNull(), "transform": NSNull(), "hidden": NSNull()]
                     layer?.addSublayer(l)
                     dots.append(Dot(layer: l, side: side, inner: inner, index: i))
                 }
             }
         }
-        dotLuminance = Array(repeating: nil, count: dots.count)
         positionDots()
-        updateColors(dt: 1)
     }
 
     @objc private func step(_ link: CADisplayLink) {
@@ -128,11 +125,6 @@ final class DotsView: NSView {
         let dt = CGFloat(min(max(now - (lastTimestamp ?? now), 0), 0.05))
         lastTimestamp = now
         advance(by: dt, cue: cueProvider())
-        colorClock += Double(dt)
-        if colorClock >= 1.0 / 15 { // colors at 15 Hz is plenty
-            updateColors(dt: CGFloat(colorClock))
-            colorClock = 0
-        }
     }
 
     /// Moves the animation forward by `dt` seconds toward the given cue.
@@ -223,44 +215,6 @@ final class DotsView: NSView {
             }
         }
         CATransaction.commit()
-    }
-
-    /// Re-samples the background behind each visible dot and eases its tone toward a contrast.
-    private func updateColors(dt: CGFloat) {
-        let mode = Settings.shared.color
-        guard mode.isAdaptive, bounds.width > 0, bounds.height > 0 else { return }
-        let k = min(1, dt / 0.15)
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        for (i, dot) in dots.enumerated() where !dot.layer.isHidden {
-            let p = dot.layer.position
-            guard p.y > -spacing / 2, p.y < bounds.height + spacing / 2 else { continue }
-            let nx = min(max(p.x / bounds.width, 0), 1)
-            let ny = min(max(1 - p.y / bounds.height, 0), 1) // sampler origin is top-left
-            guard let sampled = sampler?.luminance(atX: nx, y: ny) else {
-                if dotLuminance[i] != nil {
-                    dotLuminance[i] = nil
-                    dot.layer.backgroundColor = mode.color(onBackground: nil).cgColor
-                }
-                continue
-            }
-            let previous = dotLuminance[i]
-            let lum = previous.map { $0 + (sampled - $0) * k } ?? sampled
-            if previous == nil || abs(lum - previous!) > 0.004 {
-                dotLuminance[i] = lum
-                dot.layer.backgroundColor = mode.color(onBackground: lum).cgColor
-            }
-        }
-        CATransaction.commit()
-    }
-
-    /// Test hook: color each dot as if the background luminance at its position were `lum(point)`.
-    func applyBackground(_ mode: DotColor, _ lum: (CGPoint) -> CGFloat) {
-        for (i, dot) in dots.enumerated() {
-            let l = lum(dot.layer.position)
-            dotLuminance[i] = l
-            dot.layer.backgroundColor = mode.color(onBackground: l).cgColor
-        }
     }
 
     private func smoothstep(_ t: CGFloat) -> CGFloat {

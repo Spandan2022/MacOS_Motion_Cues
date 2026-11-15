@@ -61,61 +61,21 @@ enum DotOpacity: String, CaseIterable {
 }
 
 enum DotColor: String, CaseIterable {
-    case greyscale, blue, yellow, green, red, purple, white, black
+    case white, grey, black, blue, yellow, green, red, purple
 
-    var title: String {
+    var title: String { rawValue.capitalized }
+
+    var fill: NSColor {
         switch self {
-        case .greyscale: "Greyscale (adaptive)"
-        case .white: "White (fixed)"
-        case .black: "Black (fixed)"
-        default: rawValue.capitalized
+        case .white: NSColor(white: 1, alpha: 1)
+        case .grey: NSColor(white: 0.62, alpha: 1)
+        case .black: NSColor(white: 0, alpha: 1)
+        case .blue: NSColor(hue: 0.60, saturation: 0.70, brightness: 1, alpha: 1)
+        case .yellow: NSColor(hue: 0.14, saturation: 0.85, brightness: 1, alpha: 1)
+        case .green: NSColor(hue: 0.37, saturation: 0.70, brightness: 0.92, alpha: 1)
+        case .red: NSColor(hue: 0.0, saturation: 0.72, brightness: 1, alpha: 1)
+        case .purple: NSColor(hue: 0.78, saturation: 0.55, brightness: 1, alpha: 1)
         }
-    }
-
-    /// Whether the dots adapt to the background behind each one (needs screen sampling).
-    var isAdaptive: Bool { self != .white && self != .black }
-
-    /// Base hue for the colored options.
-    var hue: CGFloat? {
-        switch self {
-        case .blue: 0.60
-        case .yellow: 0.14
-        case .green: 0.37
-        case .red: 0.0
-        case .purple: 0.78
-        default: nil
-        }
-    }
-
-    /// The dot's color for a background luminance (0 = black … 1 = white), or nil if unknown.
-    ///
-    /// Greyscale flips between light and dark tones against the background. Colored dots keep
-    /// their hue: deeper and more saturated on bright backgrounds, brighter and slightly
-    /// desaturated on dark ones.
-    func color(onBackground lum: CGFloat?) -> NSColor {
-        switch self {
-        case .white: return NSColor(white: 1, alpha: 1)
-        case .black: return NSColor(white: 0, alpha: 1)
-        default: break
-        }
-        guard let lum else {
-            // No screen sampling: a light tone that reads on most backgrounds.
-            if let hue { return NSColor(hue: hue, saturation: 0.6, brightness: 1, alpha: 1) }
-            return NSColor(white: 0.92, alpha: 1)
-        }
-        // 0 on dark backgrounds → 1 on bright ones, with a short crossover around mid-grey.
-        let c = min(max((lum - 0.46) / 0.08, 0), 1)
-        let t = c * c * (3 - 2 * c)
-        if let hue {
-            let saturation = 0.5 + 0.5 * t
-            let brightness = 1.0 - 0.45 * t
-            // Yellow drifts toward amber when deepened, like iOS.
-            let h = self == .yellow ? hue - 0.04 * t : hue
-            return NSColor(hue: h, saturation: saturation, brightness: brightness, alpha: 1)
-        }
-        let onDark = min(0.95, max(0.85, lum + 0.5))
-        let onBright = min(0.38, max(0.18, lum - 0.55))
-        return NSColor(white: onDark + (onBright - onDark) * t, alpha: 1)
     }
 }
 
@@ -162,7 +122,7 @@ final class Settings {
         set { set("density", newValue) }
     }
     var color: DotColor {
-        get { value("color", .greyscale) }
+        get { value("color", .grey) }
         set { set("color", newValue) }
     }
     var opacity: DotOpacity {

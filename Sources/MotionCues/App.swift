@@ -16,6 +16,14 @@ enum Main {
             RenderTest.renderDemo(outputDirectory: args[i + 1])
             return
         }
+        if let i = args.firstIndex(of: "--login-item"), i + 1 < args.count {
+            exit(AppController.loginItemCommand(args[i + 1]))
+        }
+        if let i = args.firstIndex(of: "--render-onboarding"), i + 1 < args.count {
+            OnboardingController.renderPages(outputDirectory: args[i + 1])
+            OnboardingController.renderPages(outputDirectory: args[i + 1], appearance: .darkAqua)
+            return
+        }
         if let i = args.firstIndex(of: "--render-test"), i + 1 < args.count {
             RenderTest.run(outputDirectory: args[i + 1])
             return
@@ -39,6 +47,8 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var autoTimer: Timer?
     private var quietSince: TimeInterval?
     private var autoActive = false
+
+    private var onboarding: OnboardingController?
 
     // Synthetic motion for "Test Motion".
     private var simulation: (start: TimeInterval, profile: (Double) -> MotionCue?)?
@@ -84,6 +94,68 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
             if let profile = profiles[args[i + 1]] { simulate(profile) }
         }
         updateVisibility()
+        if !OnboardingController.isCompleted || args.contains("--onboarding") { showOnboarding() }
+    }
+
+    // MARK: - Open at Login
+
+    private func toggleOpenAtLogin() {
+        let service = SMAppService.mainApp
+        do {
+            switch service.status {
+            case .enabled, .requiresApproval: try service.unregister()
+            default: try service.register()
+            }
+        } catch {
+            alert("Couldn't change Open at Login", error.localizedDescription)
+            return
+        }
+        // macOS can hold a new login item until it's allowed in System Settings ▸ Login Items.
+        if service.status == .requiresApproval {
+            NSApp.activate(ignoringOtherApps: true)
+            let a = NSAlert()
+            a.messageText = "Allow Motion Cues in Login Items"
+            a.informativeText = "macOS needs you to approve this once. Turn on Motion Cues under “Allow in the Background” or “Open at Login” in System Settings."
+            a.addButton(withTitle: "Open System Settings")
+            a.addButton(withTitle: "Later")
+            if a.runModal() == .alertFirstButtonReturn { SMAppService.openSystemSettingsLoginItems() }
+        }
+    }
+
+    /// Debug: `--login-item status|on|off` prints or changes the login item without the menu.
+    static func loginItemCommand(_ command: String) -> Int32 {
+        let service = SMAppService.mainApp
+        func describe(_ s: SMAppService.Status) -> String {
+            switch s {
+            case .enabled: "enabled"
+            case .requiresApproval: "requiresApproval"
+            case .notRegistered: "notRegistered"
+            case .notFound: "notFound"
+            @unknown default: "unknown"
+            }
+        }
+        do {
+            switch command {
+            case "on": try service.register()
+            case "off": try service.unregister()
+            default: break
+            }
+        } catch {
+            print("error:", error.localizedDescription)
+            return 1
+        }
+        print(describe(service.status))
+        return 0
+    }
+
+    // MARK: - Onboarding
+
+    private func showOnboarding() {
+        if onboarding == nil {
+            let model = OnboardingModel()
+            onboarding = OnboardingController(model: model)
+        }
+        onboarding?.show()
     }
 
     // MARK: - State
@@ -159,21 +231,6 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let advanced = NSMenuItem(title: "Advanced", action: nil, keyEquivalent: "")
         let adv = NSMenu()
 
-        if settings.color.isAdaptive, !ScreenSampler.hasPermission {
-            adv.addItem(action("Allow Screen Recording (adaptive colors)…") {
-                NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture")!)
-            })
-            adv.addItem(action("Relaunch Motion Cues") {
-                let path = Bundle.main.bundleURL.path
-                let task = Process()
-                task.executableURL = URL(fileURLWithPath: "/bin/sh")
-                task.arguments = ["-c", "sleep 0.5; open \"\(path)\""]
-                try? task.run()
-                NSApp.terminate(nil)
-            })
-            adv.addItem(.separator())
-        }
-
         adv.addItem(submenu("Dot Size", DotSize.allCases, current: settings.dotSize, title: \.title) { self.settings.dotSize = $0 })
         adv.addItem(submenu("Dot Density", DotDensity.allCases, current: settings.density, title: \.title) { self.settings.density = $0 })
         adv.addItem(submenu("Dot Color", DotColor.allCases, current: settings.color, title: \.title) { self.settings.color = $0 })
@@ -204,24 +261,28 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         test.submenu = testMenu
         adv.addItem(test)
 
+        adv.addItem(.separator())
+        adv.addItem(action("Welcome Guide…") { [weak self] in self?.showOnboarding() })
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
+        adv.addItem(disabled("Version \(version)"))
+
         advanced.submenu = adv
         menu.addItem(advanced)
 
-        if Bundle.main.bundleIdentifier != nil {
-            menu.addItem(.separator())
-            let login = action("Launch at Login") {
-                let service = SMAppService.mainApp
-                do {
-                    if service.status == .enabled { try service.unregister() } else { try service.register() }
-                } catch { NSLog("MotionCues: login item error \(error)") }
-            }
-            login.state = SMAppService.mainApp.status == .enabled ? .on : .off
-            menu.addItem(login)
-        }
-
         menu.addItem(.separator())
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "dev"
-        menu.addItem(disabled("Motion Cues \(version)"))
+        let login = action("Open at Login") { [weak self] in self?.toggleOpenAtLogin() }
+        // Login items need an installed app bundle; a bare development build can't register one.
+        if Bundle.main.bundleIdentifier != nil {
+            switch SMAppService.mainApp.status {
+            case .enabled: login.state = .on
+            case .requiresApproval: login.state = .mixed   // registered, waiting for approval in System Settings
+            default: login.state = .off
+            }
+        } else {
+            login.action = nil
+            login.isEnabled = false
+        }
+        menu.addItem(login)
         menu.addItem(action("Check for Updates…") {
             NSWorkspace.shared.open(URL(string: "https://github.com/Spandan2022/MacOS_Motion_Cues/releases/latest")!)
         })
@@ -283,31 +344,16 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     // MARK: - Calibration
 
-    private struct CalibrationStep {
-        let instruction: String
-        let measure: (MotionProcessor) -> Double
-        let apply: (Settings, Bool) -> Void
-        let threshold: Double
-        let integrate: Bool
-    }
-
     private func calibrate() {
         guard sensorRunning else {
             alert("Motion sensor unavailable", "This Mac's motion sensor couldn't be read, so calibration isn't possible.")
             return
         }
-        let steps = [
-            CalibrationStep(instruction: "Put the laptop on a table. After clicking Start, slide it briskly AWAY from you (about 10 cm), then stop.",
-                            measure: { $0.rawForward }, apply: { $0.invertForward = $1 }, threshold: 0.05, integrate: false),
-            CalibrationStep(instruction: "After clicking Start, slide the laptop briskly to your RIGHT (about 10 cm), then stop.",
-                            measure: { $0.rawLateral }, apply: { $0.invertLateral = $1 }, threshold: 0.05, integrate: false),
-            CalibrationStep(instruction: "After clicking Start, rotate the laptop on the table to the LEFT (counter-clockwise, about a quarter turn).",
-                            measure: { $0.rawYaw }, apply: { $0.invertTurn = $1 }, threshold: 15, integrate: true),
-        ]
-        runCalibration(steps, index: 0, results: [])
+        runCalibration(index: 0, results: [])
     }
 
-    private func runCalibration(_ steps: [CalibrationStep], index: Int, results: [String]) {
+    private func runCalibration(index: Int, results: [String]) {
+        let steps = CalibrationStep.all
         guard index < steps.count else {
             alert("Calibration complete", results.joined(separator: "\n"))
             return
@@ -316,12 +362,25 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
         NSApp.activate(ignoringOtherApps: true)
         let a = NSAlert()
         a.messageText = "Calibrate Direction (\(index + 1) of \(steps.count))"
-        a.informativeText = step.instruction + "\n\nYou'll have 3 seconds."
+        a.informativeText = "Put the laptop on a table. After clicking Start, \(step.instruction)\n\nYou'll have 3 seconds."
         a.addButton(withTitle: "Start")
         a.addButton(withTitle: "Cancel")
         guard a.runModal() == .alertFirstButtonReturn else { return }
 
-        // Sample for 3 s: take the sign of the first strong reading (slides) or the integral (turns).
+        measureCalibration(step) { [weak self] inverted in
+            guard let self else { return }
+            if let inverted {
+                self.runCalibration(index: index + 1, results: results + ["\(step.name): \(inverted ? "inverted" : "normal")"])
+            } else {
+                self.retry(index: index, results: results)
+            }
+        }
+    }
+
+    /// Samples one calibration step for 3 s and applies it. Calls back with whether the axis
+    /// is inverted, or nil if no clear movement was detected.
+    private func measureCalibration(_ step: CalibrationStep, completion: @escaping (Bool?) -> Void) {
+        // Take the sign of the first strong reading (slides) or the integral (turns).
         var sign: Double?
         var integral = 0.0
         let start = ProcessInfo.processInfo.systemUptime
@@ -336,26 +395,20 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
             guard ProcessInfo.processInfo.systemUptime - start > 3 else { return }
             timer.invalidate()
             if step.integrate, abs(integral) > step.threshold { sign = integral > 0 ? 1 : -1 }
-            let names = ["Front/back", "Left/right", "Turns"]
-            var results = results
-            if let sign {
-                step.apply(self.settings, sign < 0)
-                results.append("\(names[index]): \(sign < 0 ? "inverted" : "normal")")
-                self.runCalibration(steps, index: index + 1, results: results)
-            } else {
-                self.retry(steps, index: index, results: results)
-            }
+            guard let sign else { completion(nil); return }
+            step.apply(self.settings, sign < 0)
+            completion(sign < 0)
         }
     }
 
-    private func retry(_ steps: [CalibrationStep], index: Int, results: [String]) {
+    private func retry(index: Int, results: [String]) {
         NSApp.activate(ignoringOtherApps: true)
         let a = NSAlert()
         a.messageText = "No clear movement detected"
         a.informativeText = "Try again with a quicker, firmer motion."
         a.addButton(withTitle: "Try Again")
         a.addButton(withTitle: "Cancel")
-        if a.runModal() == .alertFirstButtonReturn { runCalibration(steps, index: index, results: results) }
+        if a.runModal() == .alertFirstButtonReturn { runCalibration(index: index, results: results) }
     }
 
     private func alert(_ title: String, _ text: String) {
@@ -378,6 +431,26 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
             fflush(stdout)
         }
     }
+}
+
+/// One step of direction calibration: a movement, and the setting it decides.
+struct CalibrationStep {
+    let name: String
+    /// What to do, phrased to follow "After clicking Start, ".
+    let instruction: String
+    let measure: (MotionProcessor) -> Double
+    let apply: (Settings, Bool) -> Void
+    let threshold: Double
+    let integrate: Bool
+
+    static let all = [
+        CalibrationStep(name: "Front/back", instruction: "slide the laptop briskly AWAY from you (about 10 cm), then stop.",
+                        measure: { $0.rawForward }, apply: { $0.invertForward = $1 }, threshold: 0.05, integrate: false),
+        CalibrationStep(name: "Left/right", instruction: "slide the laptop briskly to your RIGHT (about 10 cm), then stop.",
+                        measure: { $0.rawLateral }, apply: { $0.invertLateral = $1 }, threshold: 0.05, integrate: false),
+        CalibrationStep(name: "Turns", instruction: "rotate the laptop on the table to the LEFT (counter-clockwise, about a quarter turn).",
+                        measure: { $0.rawYaw }, apply: { $0.invertTurn = $1 }, threshold: 15, integrate: true),
+    ]
 }
 
 /// NSMenuItem that runs a closure.

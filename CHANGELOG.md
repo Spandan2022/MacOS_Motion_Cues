@@ -5,6 +5,19 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- First-launch Welcome Guide: a live preview of the dots on a sample drive, and where the app lives in the menu bar. Reopen it from Advanced ▸ Welcome Guide….
+
+### Changed
+- The menu's "Launch at Login" is now "Open at Login", next to Check for Updates…; the version number moved to the bottom of Advanced. If macOS holds the login item for approval, the app now says so and offers to open System Settings (the item shows a dash until it's approved), and errors are shown instead of failing silently.
+
+### Removed
+- Adaptive dot colors, and with them the Screen Recording permission. Motion Cues no longer looks at the screen at all. Dot Color is now a fixed White, Grey (default), Black, Blue, Yellow, Green, Red or Purple.
+
+### Fixed
+- Dots sometimes flowed the wrong way (up while speeding up). Pulling away from a stop, the sensor still counted as "at rest" and absorbed the acceleration into its gravity estimate, then played it back as braking; long pushes were slowly absorbed the same way. Gravity now only follows the accelerometer when the laptop is truly at rest, and pauses during a sustained push without tilting.
+- Gentle, smooth acceleration (EVs, trains) is picked up instead of being absorbed.
+
 ## [0.2.0] - 2026-11-15
 
 ### Changed

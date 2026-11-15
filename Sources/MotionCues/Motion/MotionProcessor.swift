@@ -43,9 +43,15 @@ final class MotionProcessor {
     private(set) var gyroNoise: Double = 0
     private var gyroLowPass = Vec3.zero
     private var gyroNoisePower: Double = 0
-    /// Seconds the laptop has been perfectly still (no vibration, no rotation).
+    /// Seconds the laptop has been perfectly still (no vibration, no rotation, no push).
     private var stillTime: Double = 0
     var isStill: Bool { stillTime > 1.5 }
+    /// Horizontal difference between the (lightly smoothed) accelerometer and the gravity
+    /// estimate, in g. Near zero at rest; a steady push shows up here even when it's too smooth
+    /// to cause vibration.
+    private var accelOffset: Double = 0
+    /// Seconds gravity correction has been paused for a sustained push.
+    private var holdTime: Double = 0
 
     /// Seconds of sustained, vehicle-like acceleration (for Automatic mode).
     private(set) var motionEvidence: Double = 0
@@ -82,6 +88,12 @@ final class MotionProcessor {
     private let fusedGravityTau = 12.0    // s; accel correction when the gyro is tracking tilt
     private let plainGravityTau = 3.0     // s; before the gyro sign is known
     private let handlingGravityTau = 0.4  // s; while the laptop is clearly being moved
+    private let stillOffset = 0.006       // g; below this the accelerometer agrees with gravity (noise)
+    // s; lock-on while still. Slow enough that even a gentle push outgrows `stillOffset` before
+    // it can be absorbed (anything building faster than stillOffset / tau ≈ 0.002 g/s).
+    private let stillGravityTau = 3.0
+    private let holdThreshold = 0.015     // g of sustained push that pauses gravity correction
+    private let maxHold = 20.0            // s; longest pause, so gyro drift can't build up
     private let tiltThreshold = 20.0      // deg/s of tilting that counts as "laptop being moved"
     private let prefilterTau = 0.1        // s; removes sensor noise (short, for low lag)
         private let deadZone = 0.008          // g; below this (typing, desk bumps) the dots stay still
@@ -90,6 +102,7 @@ final class MotionProcessor {
     private let vibrationFloor = 0.02     // g RMS of sensor noise at rest (measured ~0.018)
 
     private static let signKey = "gyroPropagationSign"
+    private let persistsGyroSign: Bool
 
     // Stillness (measured at rest: accel noise ≤ 0.005 g, gyro noise ≤ 0.75 °/s).
     private let stillAccelNoise = 0.008
@@ -117,8 +130,11 @@ final class MotionProcessor {
     private(set) var rawYaw: Double = 0
 
     /// - Parameter learnedGyroSign: override the saved gyro sign (tests pass 0 = not yet learned).
+    ///   When given, the learned sign is never saved, so simulated data can't overwrite the
+    ///   real hardware's sign.
     init(learnedGyroSign: Double? = nil) {
         gyroSign = learnedGyroSign ?? UserDefaults.standard.double(forKey: Self.signKey)
+        persistsGyroSign = learnedGyroSign == nil
     }
 
     func reset() {
@@ -129,6 +145,8 @@ final class MotionProcessor {
         cue = MotionCue()
         filtered = (0, 0)
         sustained = (0, 0)
+        accelOffset = 0
+        holdTime = 0
         motionEvidence = 0
         stillTime = 0
         uptime = 0
@@ -180,7 +198,7 @@ final class MotionProcessor {
                 signScore += observed.dot(predicted) / (observed.length * predicted.length) * dt * 10
                 if abs(signScore) > 15 {
                     gyroSign = signScore > 0 ? 1 : -1
-                    UserDefaults.standard.set(gyroSign, forKey: Self.signKey)
+                    if persistsGyroSign { UserDefaults.standard.set(gyroSign, forKey: Self.signKey) }
                 }
             }
         }
@@ -189,17 +207,26 @@ final class MotionProcessor {
         if gyroSign != 0 {
             g = g + g.cross(omega) * (gyroSign * dt)
         }
-        // When perfectly still, lock gravity to the accelerometer: this removes the slow drift
-        // that a tiny gyro bias would otherwise add to the fused estimate.
-        // Otherwise correct slowly. Before the gyro's sign is known we can't follow tilts with
-        // it, but if it shows no rotation at all, gravity can't have moved, so slow is still safe.
+        // Gravity can only change direction when the laptop rotates, and the gyro sees rotation.
+        // So the accelerometer only nudges the estimate, to remove slow gyro drift:
+        // - perfectly still and already agreeing: lock on (cleans up drift);
+        // - a sustained push with no tilting (speeding up, braking, a long curve): pause, or the
+        //   push would slowly be mistaken for gravity and later read as the opposite motion;
+        // - otherwise: slowly. Before the gyro's sign is known we can't follow tilts with it, but
+        //   if it shows no rotation at all, gravity can't have moved, so slow is still safe.
+        let offsetVector = s1 - g
+        accelOffset = (offsetVector - g.normalized * offsetVector.dot(g.normalized)).length
+        let pushing = (sustained.f * sustained.f + sustained.l * sustained.l).squareRoot() > holdThreshold
+        let canTrustGyro = gyroSign != 0 || tiltRate < 2
+        holdTime = pushing && canTrustGyro && !handling ? holdTime + dt : 0
         let tau: Double
         if uptime < 1 { tau = 0.2 }                       // warm-up: lock on fast
-        else if isStill { tau = 0.3 }
         else if handling { tau = handlingGravityTau }
-        else if gyroSign != 0 || tiltRate < 2 { tau = fusedGravityTau }
+        else if isStill { tau = stillGravityTau }
+        else if holdTime > 0 && holdTime < maxHold { tau = .infinity }
+        else if canTrustGyro { tau = fusedGravityTau }
         else { tau = plainGravityTau }
-        g = g + (a - g) * Self.alpha(dt, tau)
+        if tau.isFinite { g = g + (a - g) * Self.alpha(dt, tau) }
         gravity = g
 
         let up = g.normalized
@@ -283,7 +310,8 @@ final class MotionProcessor {
         lastGyroTime = t
 
         // Stillness: almost no vibration and no rotation.
-        if accelNoise < stillAccelNoise, gyroNoise < stillGyroNoise, (raw - gyroBias).length < 3 {
+        if accelNoise < stillAccelNoise, gyroNoise < stillGyroNoise, (raw - gyroBias).length < 3,
+           accelOffset < stillOffset {
             stillTime += dt
         } else {
             stillTime = 0

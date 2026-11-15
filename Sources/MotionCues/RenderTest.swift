@@ -10,21 +10,16 @@ enum RenderTest {
     static func run(outputDirectory: String) {
         let size = CGSize(width: 900, height: 580)
         // Left half: bright page with a mid-grey band. Right half: dark.
-        func background(_ p: CGPoint) -> CGFloat {
-            if p.x < size.width / 2 { return p.y > 380 && p.y < 460 ? 0.5 : 0.97 }
-            return 0.06
-        }
         let cases: [(String, MotionCue, DotColor)] = [
-            ("rest-grey", MotionCue(), .greyscale),
-            ("hard-brake-grey", MotionCue(forward: -0.35), .greyscale),
+            ("rest-white", MotionCue(), .white),
+            ("hard-brake-white", MotionCue(forward: -0.35), .white),
             ("turn-left-yellow", MotionCue(lateral: -0.2, yawRate: 30), .yellow),
-            ("rest-blue", MotionCue(), .blue),
+            ("rest-black", MotionCue(), .black),
         ]
         for (name, cue, color) in cases {
             let view = DotsView(frame: CGRect(origin: .zero, size: size))
-            view.rebuildDots()
+            view.colorOverride = color
             for _ in 0..<60 { view.advance(by: 1.0 / 60, cue: cue) } // 1 s
-            view.applyBackground(color, background)
 
             let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds)!
             NSGraphicsContext.saveGraphicsState()
@@ -52,11 +47,6 @@ enum RenderTest {
         let split = size.width * 0.5
         // Text lines on the light document, as (y, height) bands.
         let lines: [(CGFloat, CGFloat)] = stride(from: 470, to: 60, by: -34).map { (CGFloat($0), 10) }
-        func lum(_ p: CGPoint) -> CGFloat {
-            if p.x >= split { return 0.08 + 0.10 * (p.y / size.height) }
-            if p.x > 70, p.x < split - 40, lines.contains(where: { p.y >= $0.0 && p.y <= $0.0 + $0.1 }) { return 0.35 }
-            return 0.96
-        }
         func drawBackground() {
             NSColor(white: 0.96, alpha: 1).setFill()
             CGRect(x: 0, y: 0, width: split, height: size.height).fill()
@@ -77,7 +67,6 @@ enum RenderTest {
         var t = 0.0
         while let cue = AppController.drive(t) {
             for _ in 0..<3 { view.advance(by: 1.0 / 60, cue: cue) }
-            view.applyBackground(.greyscale, lum)
             let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds)!
             NSGraphicsContext.saveGraphicsState()
             let ctx = NSGraphicsContext(bitmapImageRep: rep)!
