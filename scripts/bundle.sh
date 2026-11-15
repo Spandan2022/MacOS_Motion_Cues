@@ -8,7 +8,7 @@
 #   scripts/bundle.sh               build, sign, install to ~/Applications
 #   scripts/bundle.sh --no-install  build and sign only (used for releases)
 #
-# Signing: uses $CODESIGN_IDENTITY if set, otherwise the first Developer ID / Apple Development
+# Signing: uses $CODESIGN_IDENTITY if set, otherwise a Developer ID, otherwise an Apple Development
 # identity in your keychain, otherwise an ad-hoc signature.
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -53,7 +53,10 @@ PLIST
 
 # Sign with a real identity if one exists, so macOS settings tied to the app (like Open at Login)
 # survive rebuilds. Ad-hoc signatures change every build, so macOS treats each build as a new app.
-IDENTITY="${CODESIGN_IDENTITY:-$(security find-identity -p codesigning -v 2>/dev/null | grep -m1 -oE '"(Developer ID Application|Apple Development)[^"]*"' | tr -d '"' || true)}"
+# Prefer Developer ID (needed for notarized releases), then Apple Development.
+IDENTITIES="$(security find-identity -p codesigning -v 2>/dev/null || true)"
+FOUND="$(printf '%s\n' "$IDENTITIES" | grep -m1 -oE '"Developer ID Application[^"]*"' || printf '%s\n' "$IDENTITIES" | grep -m1 -oE '"Apple Development[^"]*"' || true)"
+IDENTITY="${CODESIGN_IDENTITY:-$(printf '%s' "$FOUND" | tr -d '"')}"
 if [[ -n "$IDENTITY" ]]; then
   codesign --force --options runtime --timestamp --sign "$IDENTITY" "$APP"
   echo "Signed with: $IDENTITY"

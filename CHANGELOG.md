@@ -5,6 +5,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Changed
+- Releases are signed with a Developer ID and notarized by Apple, so the app opens without the "Open Anyway" step.
+- `scripts/bundle.sh` prefers a Developer ID identity over Apple Development when both are installed.
+
+### Fixed
+- The uninstaller now refers to "Open at Login" (the menu item's current name).
+
 ## [0.3.0] - 2026-11-15
 
 ### Added

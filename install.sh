@@ -47,7 +47,7 @@ if [ "${1:-}" = "--uninstall" ]; then
   defaults delete "$BUNDLE_ID" >/dev/null 2>&1 || true
   tccutil reset ScreenCapture "$BUNDLE_ID" >/dev/null 2>&1 || true
   info "Removed the app and its settings."
-  info "If you had turned on Launch at Login, remove it in System Settings ▸ General ▸ Login Items."
+  info "If you had turned on Open at Login, remove it in System Settings ▸ General ▸ Login Items."
   exit 0
 fi
 
