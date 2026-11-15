@@ -5,10 +5,13 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- Releases are now actually notarized. 0.3.1 was signed with the Developer ID, but the packaging script didn't recognize the signature and skipped notarization; it now detects it, and stops with an error instead of skipping silently.
+
 ## [0.3.1] - 2026-11-15
 
 ### Changed
-- Releases are signed with a Developer ID and notarized by Apple, so the app opens without the "Open Anyway" step.
+- Releases are signed with a Developer ID.
 - `scripts/bundle.sh` prefers a Developer ID identity over Apple Development when both are installed.
 
 ### Fixed

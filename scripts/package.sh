@@ -29,7 +29,11 @@ notarize() {
 }
 
 SIGNED_WITH_DEVELOPER_ID=0
-codesign -dv "$APP" 2>&1 | grep -q "Authority=Developer ID Application" && SIGNED_WITH_DEVELOPER_ID=1
+codesign -dvv "$APP" 2>&1 | grep -q "Authority=Developer ID Application" && SIGNED_WITH_DEVELOPER_ID=1
+if [[ -n "${NOTARY_PROFILE:-}" && $SIGNED_WITH_DEVELOPER_ID == 0 ]]; then
+  echo "Error: NOTARY_PROFILE is set, but the app isn't signed with a Developer ID, so it can't be notarized." >&2
+  exit 1
+fi
 
 if [[ -n "${NOTARY_PROFILE:-}" && $SIGNED_WITH_DEVELOPER_ID == 1 ]]; then
   echo "Notarizing app…"
@@ -48,7 +52,7 @@ hdiutil create -volname "Motion Cues" -srcfolder "$STAGE" -ov -format UDZO "$DMG
 rm -rf "$STAGE"
 
 if [[ -n "${NOTARY_PROFILE:-}" && $SIGNED_WITH_DEVELOPER_ID == 1 ]]; then
-  codesign --force --timestamp --sign "$(codesign -dv "$APP" 2>&1 | sed -n 's/^Authority=\(Developer ID Application.*\)/\1/p' | head -1)" "$DMG"
+  codesign --force --timestamp --sign "$(codesign -dvv "$APP" 2>&1 | sed -n 's/^Authority=\(Developer ID Application.*\)/\1/p' | head -1)" "$DMG"
   echo "Notarizing DMG…"
   notarize "$DMG"
   xcrun stapler staple "$DMG"
