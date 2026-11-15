@@ -54,8 +54,7 @@ Running the same command again updates to the newest version. To remove the app,
 **Download the DMG.** [**⬇ Download MotionCues.dmg**](https://github.com/Spandan2022/MacOS_Motion_Cues/releases/latest/download/MotionCues.dmg)
 (always the latest version; older versions are on the
 [releases page](https://github.com/Spandan2022/MacOS_Motion_Cues/releases)), open it and drag Motion Cues into
-Applications. Releases aren't notarized by Apple yet, so the first time you open it, go to **System Settings ▸ Privacy
-& Security** and click **Open Anyway**. The Terminal install above skips this step.
+Applications. Releases are signed and notarized by Apple, so it opens like any other app.
 
 **Build from source.** This needs Xcode or the Command Line Tools (`xcode-select --install`).
 
@@ -162,20 +161,10 @@ switch to **On** for that trip. If it turns on when you're *not* moving, please
 [open a ride report](https://github.com/Spandan2022/MacOS_Motion_Cues/issues/new/choose).
 </details>
 
-<details>
-<summary><b>"Motion Cues can't be opened"</b></summary>
-
-<br>
-
-That's macOS blocking a download from an unverified developer. Allow it once in **System Settings ▸ Privacy &
-Security ▸ Open Anyway**, or use the [Terminal install](#install), which avoids it.
-</details>
-
 ## Known limitations
 
 - macOS has no public API for the MacBook motion sensor, so a future macOS update could break access to it.
 - The sensitivity and Automatic thresholds are tuned from desk tests and simulated drives. Real rides will refine them.
-- Releases aren't notarized yet, so a browser-downloaded copy needs a one-time **Open Anyway**.
 
 ## Development
 
