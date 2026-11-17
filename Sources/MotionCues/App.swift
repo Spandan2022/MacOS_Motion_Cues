@@ -60,6 +60,8 @@ final class AppController: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let autoOffDelay: TimeInterval = 180
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        if AppMover.offerMoveIfNeeded() { return }
+
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
         let menu = NSMenu()
         menu.delegate = self

@@ -5,6 +5,9 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+- If Motion Cues is opened straight from the DMG or from Downloads, it offers to move itself into Applications, relaunches from there and ejects the disk image. Before, it kept running from the DMG and quit when the image was ejected.
+
 ## [0.3.2] - 2026-11-15
 
 ### Fixed
