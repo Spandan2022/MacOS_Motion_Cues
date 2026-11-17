@@ -5,6 +5,8 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-11-17
+
 ### Added
 - If Motion Cues is opened straight from the DMG or from Downloads, it offers to move itself into Applications, relaunches from there and ejects the disk image. Before, it kept running from the DMG and quit when the image was ejected.
 
@@ -59,7 +61,8 @@ First public release.
 - One-line installer (`install.sh`) with `--from-source` and `--uninstall`.
 - `start.sh`, a DMG/zip packaging script, CI, and a release workflow.
 
-[Unreleased]: https://github.com/Spandan2022/MacOS_Motion_Cues/compare/v0.3.2...HEAD
+[Unreleased]: https://github.com/Spandan2022/MacOS_Motion_Cues/compare/v0.3.3...HEAD
+[0.3.3]: https://github.com/Spandan2022/MacOS_Motion_Cues/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/Spandan2022/MacOS_Motion_Cues/compare/v0.3.1...v0.3.2
 [0.3.1]: https://github.com/Spandan2022/MacOS_Motion_Cues/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/Spandan2022/MacOS_Motion_Cues/compare/v0.2.0...v0.3.0
